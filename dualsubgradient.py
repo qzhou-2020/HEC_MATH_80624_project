@@ -5,10 +5,10 @@ dual-subgradient epi-approximate robust optimization
 import numpy as np
 
 from oracle import oracle
-from uncertainty import BudgetUncertaintySet
+from uncertainty import BudgetUncertaintySet, CertaintySet
 
 
-def dualSubgradient(eps, U, abar, cs, ds, ps, B):
+def dualSubgradient(eps, U, abar, cs, ds, ps, B, earlystop=True, disp=True):
     """
         An epsilon-approximate robust optimization solver 
         based on dual-subgradient method.
@@ -26,53 +26,48 @@ def dualSubgradient(eps, U, abar, cs, ds, ps, B):
     # call oracle to solve for x
     ahat = abar * (1.0 - 0.25 * z)
     fval, x = oracle(eps, ahat, cs, ds, ps, B)
+    
     # calculate \nabla_z f(x, z)
     g = cs * np.log(1 + x / ds) * np.power(1 + x / ds, ahat)
-    
-    # for stopping
-    g0 = g
-    etol = 1e-6
-    normg0 = np.linalg.norm(g0, 2)
-    # max iter number
-    # todo: should be determined properly
-    itermax = 1e2
 
+    # max iter number
+    itermax = 1e3
     # iterate count
-    iter = 1
-    
+    iter = 0
     # save x_t
     xs = [x]
+    # output
+    fmean = 0
+    xmean = np.zeros(len(abar))
 
     while True:
-        # update z
-        zprime = z + 1/np.sqrt(iter) * g
-        
-        # take project
-        zprime = U.project(zprime)
-        
-        # how much z has moved
-        cri = np.linalg.norm(zprime - z, 2)
-        print(cri, fval)
-        if iter > itermax or cri < etol:
-            break
-
-        z = zprime
-        # new ahat
-        ahat = abar * (1. - 0.25 * z)
-
-        # solve for new x
-        fval, x = oracle(eps, ahat, cs, ds, ps, B)
-        xs.append(x)
-        
-        # update grad
+        # update ahat
+        ahat = abar * (1 - 0.25 * z)
+        # call oracle
+        fval, x = oracle(eps, ahat, cs, ds, ps, B)   
+        # calulate \nabla_z f(x, z)
         g = cs * np.log(1 + x / ds) * np.power(1 + x / ds, ahat)
-
+        # new z
+        zprime = z + 1/np.sqrt(iter) * g 
+        # update z
+        z = U.project(zprime)
         # update iter
         iter = iter + 1
-
+        
+        # iterative average     
+        fmeanprime = (iter - 1.0) / iter * fmean + fval / iter
+        xmeanprime = (iter - 1.0) / iter * xmean + x / iter
+        if disp: print("Objective value change: {:.6e}".format(fmeanprime - fmean))
+        if iter > itermax: break
+        # early stopping check
+        if earlystop and np.fabs(fmeanprime - fmean) < eps: break
+        # update fmean
+        fmean = fmeanprime
+        xmean = xmeanprime
+        
     # return the average value
     print("number of iterations:", iter)
-    return fval, np.mean(np.array(xs), axis=0)
+    return fmean, xmean
 
 
 if __name__ == "__main__":
@@ -87,5 +82,5 @@ if __name__ == "__main__":
 
     U = BudgetUncertaintySet(n, gamma, half=True)
 
-    fval, x = dualSubgradient(eps, U, abar, cs, ds, ps, B)
+    fval, x = dualSubgradient(eps, U, abar, cs, ds, ps, B, disp=False)
     print(fval, np.round(x, 4))
