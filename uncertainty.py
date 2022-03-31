@@ -45,7 +45,7 @@ class BudgetUncertaintySet(UncertaintySetBase):
         self.half = half
         # save a list of feasible realization
         self.i = 0
-        self.store = self.generate(100)
+        self.store = self.generate(10)
         # diameter of the set
         self.diameter = self._diam()
 
@@ -57,7 +57,7 @@ class BudgetUncertaintySet(UncertaintySetBase):
         # re-generate
         if self.i == len(self.store):
             self.i = 0
-            self.store = self.generate(100)
+            self.store = self.generate(10)
         return z
 
     def diam(self):
@@ -128,6 +128,7 @@ class BudgetUncertaintySet(UncertaintySetBase):
                 store.append(z)
                 count = count + 1
             if count >= n:
+                print("BudgetUncertaintySet:generate: success")
                 break
         return store
     
@@ -144,9 +145,50 @@ class BudgetUncertaintySet(UncertaintySetBase):
         return True
 
 
+class CertaintySet(UncertaintySetBase):
+
+    """no uncertainty"""
+
+    def __init__(self, size, **kwargs):
+        super().__init__(**kwargs)
+        self.n = size
+
+    def get(self):
+        return np.zeros(self.n)
+
+    def diam(self):
+        return 0
+
+    def project(self, z):
+        return np.zeros(self.n)
+
+
+class EllipsoidalUncertaintySet(UncertaintySetBase):
+    """
+    Ellipsoidal uncertainty set is:
+
+        {z \in R^n: z^T \Sigma z <= \rho}
+    
+        where \Sigma \in R^{n \times n} and \rho \in R are two parameters.
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        pass
+
+    def get(self):
+        pass
+
+    def diam(self):
+        pass
+
+    def project(self, z):
+        pass
+
+    
 def test_budgeted():
     """unit test: different methods in BudgetedUncertaintySet"""
-    n = 4
+    n = 10
     Z2 = BudgetUncertaintySet(n, 2, half=True)
 
     # check realizations
