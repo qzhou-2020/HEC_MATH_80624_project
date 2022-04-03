@@ -8,7 +8,7 @@ from oracle import oracle
 from uncertainty import BudgetUncertaintySet, CertaintySet
 
 
-def dualSubgradient(eps, U, abar, cs, ds, ps, B, earlystop=True, disp=True):
+def dualSubgradient(eps, U, abar, cs, ds, ps, B, earlystop=True, itermax=1e3, disp=True):
     """
         An epsilon-approximate robust optimization solver 
         based on dual-subgradient method.
@@ -30,16 +30,19 @@ def dualSubgradient(eps, U, abar, cs, ds, ps, B, earlystop=True, disp=True):
     # calculate \nabla_z f(x, z)
     g = cs * np.log(1 + x / ds) * np.power(1 + x / ds, ahat)
 
-    # max iter number
-    itermax = 1e3
     # iterate count
-    iter = 0
+    iter = 1
+
     # save x_t
     xs = [x]
+
     # output
     fmean = 0
     xmean = np.zeros(len(abar))
 
+    if disp:
+      #         172   5.3925e-02    -9.986455e-07
+        print("iter |   fval         fval_change ")
     while True:
         # update ahat
         ahat = abar * (1 - 0.25 * z)
@@ -51,19 +54,25 @@ def dualSubgradient(eps, U, abar, cs, ds, ps, B, earlystop=True, disp=True):
         zprime = z + 1/np.sqrt(iter) * g 
         # update z
         z = U.project(zprime)
-        # update iter
-        iter = iter + 1
         
         # iterative average     
         fmeanprime = (iter - 1.0) / iter * fmean + fval / iter
         xmeanprime = (iter - 1.0) / iter * xmean + x / iter
-        if disp: print("Objective value change: {:.6e}".format(fmeanprime - fmean))
+        
+        if disp: 
+            print(f"{iter:4d}   {fmeanprime:.4e}    {fmeanprime-fmean:.6e}")
+        
         if iter > itermax: break
+        
         # early stopping check
         if earlystop and np.fabs(fmeanprime - fmean) < eps: break
+        
         # update fmean
         fmean = fmeanprime
         xmean = xmeanprime
+        
+        # update iter
+        iter = iter + 1
         
     # return the average value
     print("number of iterations:", iter)
@@ -82,5 +91,5 @@ if __name__ == "__main__":
 
     U = BudgetUncertaintySet(n, gamma, half=True)
 
-    fval, x = dualSubgradient(eps, U, abar, cs, ds, ps, B, disp=False)
+    fval, x = dualSubgradient(eps, U, abar, cs, ds, ps, B, disp=True, earlystop=False, itermax=200)
     print(fval, np.round(x, 4))

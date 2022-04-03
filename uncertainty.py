@@ -167,23 +167,75 @@ class EllipsoidalUncertaintySet(UncertaintySetBase):
     """
     Ellipsoidal uncertainty set is:
 
-        {z \in R^n: z^T \Sigma z <= \rho}
+        {z \in R^n: z^T \Sigma z <= \rho^2}
     
         where \Sigma \in R^{n \times n} and \rho \in R are two parameters.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, size, rho, sigma=None, **kwargs):
         super().__init__(**kwargs)
-        pass
+        self.n = size
+        self.rho = rho
+        if sigma:
+            # todo: check if sigma is a valid symmerticall matrix
+            self.sigma = sigma
+            self.L = np.linalg.cholesky(sigma)
+        else:
+            self.sigma = np.eye(size)
+            self.L = np.eye(size)
+        self.i = 0
+        self.store = self.generate(10)
+        self.diameter = self._diam()
 
     def get(self):
-        pass
+        z = self.store[self.i]
+        self.i = self.i + 1
+        if self.i == len(self.store):
+            self.i = 0
+            self.store = self.generate(10)
+        return z
 
     def diam(self):
+        return self.diameter
+
+    def _diam(self):
         pass
 
-    def project(self, z):
-        pass
+    def project(self, z0):
+        # transform and scale to unit circle
+        w = self.L @ z0 / self.rho
+        normw = np.linalg.norm(w, 2)
+        if normw <= 1:
+            # z0 is inside the set
+            return z0
+        else:
+            # find the projection point if z0 is outside
+            w = w / normw * self.rho
+            z = np.linalg.solve(self.L, w)
+            return z
+
+    def generate(self, n):
+        count = 0
+        store = []
+        while True:
+            # random sample in unit hyper-sqaure
+            w = np.random.uniform(size=self.n)
+            normw = np.linalg.norm(w, 2)
+            if normw > 1:
+                continue
+            z = np.linalg.solve(self.L, w*self.rho)
+            store.append(z)
+            count = count + 1
+            if count >= n:
+                break
+        return store
+
+    def feasible(self, z):
+        tmp = z.T @ self.sigma @ z
+        if tmp <= self.rho**2:
+            return True
+        else:
+            return False
 
     
 def test_budgeted():
@@ -192,7 +244,7 @@ def test_budgeted():
     Z2 = BudgetUncertaintySet(n, 2, half=True)
 
     # check realizations
-    for _ in range(10):
+    for _ in range(50):
         print(Z2.get())
 
     # check diameter
@@ -217,5 +269,25 @@ def test_budgeted():
     print(z, np.linalg.norm(z-z0, 2))
 
 
+def test_ellipsoidal():
+    n = 2
+    Z = EllipsoidalUncertaintySet(n, 1)
+    for _ in range(10):
+        z = Z.get()
+        TF = Z.feasible(z)
+        diam = np.linalg.norm(z,2)
+        print(f"{z} is inside the set: {TF},  diameter: {diam}")
+
+    z0 = Z.get()
+    z = Z.project(z0)
+    print(f"z0: {z0}, projected z: {z}")
+
+    z0 = np.array([2, 3])
+    z = Z.project(z0)
+    print(f"z0: {z0}, projected z: {z}")
+    print(f"|z0|: {np.linalg.norm(z0, 2)}, |z|: {np.linalg.norm(z,2)}")
+
+
 if __name__ == "__main__":
     test_budgeted()
+    test_ellipsoidal()
