@@ -1,131 +1,162 @@
 """
-    An epsilon-approximate optimization oracle 
-    for the original optimization problem, with 
-    a given set of uncertainty.
+An epsilon-approximate optimization Oracle 
+for the original optimization problem, with 
+a given set of uncertainty.
 """
 
 import numpy as np
 from scipy.optimize import minimize
 
 
-def objective(x0, *args):
-    """
-        Objective function of the optimization problem. scipy.optimize.minimize
-        require such a function to take x0 and several parameters, wrapped in 
-        tuple arg.
+class Oracle():
+    r"""
+    Creates an Oracle object that gererates and :math:`\epsilon`-approximate for the Ad Campaign problem.
 
-            f(x) = sum_i c_i (1 + x_i / d_i)^a_i - c_i
-        where
-            a_i = abar_i (1 - z_i)
+    Parameters
+    ----------
+    eps : float
+        The :math:`\epsilon` approximation tolerance.
+    abar : Sequence
+        List of parameters.
+    cs : Sequence
+        List of parameters.
+    ds : Sequence
+        List of parameters.
+    ps : Sequence
+        List of prices.
+    B : float
+        The total available budget.
 
-        Inputs:
-            x0    ~ current iterate
-            args  ~ parameters to define the objective function
-                    args[0] ~ ahat_i
-                    args[1] ~ c_i
-                    args[2] ~ d_i
-                    args[3] ~ eps
-        Output:
-            y     ~ real value
-    """
+    Methods
+    -------
+    ``objective_fnc()``
 
-    ahat = args[0]
-    cs = args[1]
-    ds = args[2]
-    eps = args[3]
+    ``constraints()``
 
-    tmp = cs * np.power(1 + x0 / ds, ahat) - cs
-    return - np.sum(tmp) - eps
+    ``bounds()``
 
-def constraints(ps, B):
-    """
-        generate constraints. Scipy.optimize.minimize requires a tuple of constraints,
-        each of which is a dict with at least two keys, 'type' and 'fun'. 'type' can be
-        either 'eq' or 'ineq'; 'fun' is a callable. Particularly, 'ineq' is non-negative.
-
-        Inputs:
-            ps  ~ vector of investment
-            B   ~ total budget
-        Outputs:
-                ~ a tuple of constraints            
-    """
-    return (
-        # sum_i p_i x_i <= B
-        {'type': 'ineq', 'fun': lambda x: B - np.sum(ps * x)},
-    )
-
-
-def bounds(n):
-    """
-        generate lower and upper bounds for decision variables. 
-        Scipy.optimize.minimize requires a tuple of (lb, ub). None indicates unbounded
-
-            x_i >= 0, t is free
-
-        Input:
-            n ~ dimension of decision variable
-        Output:
-              ~ a tuple of bounds
+    ``solve()``
     """
 
-    bnds = [(0, None) for _ in range(n)]
-    # bnds.append((None, None))
-    return tuple(bnds)
+    def __init__(self, eps, abar, cs, ds, ps, B):
+        self.eps = eps
+        self.abar = abar
+        self.n = len(abar)
+        self.cs = cs
+        self.ds = ds
+        self.ps = ps
+        self.B = B
 
+    def objective_fnc(self, x):
+        r"""
+        Objective function of the optimization problem.
 
-def oracle(eps, ahat, cs, ds, ps, B):
-    """
-        An epsilon-approximate optimization oracle for the original 
-        optimization problem, with a given set of uncertainty.
+        The scipy.optimize.minimize module requires a function to take :math:`x0` and several parameters, wrapped in
+        tuple ``arg`` and use to construct the objective function
 
-            min_x objective(x, *args)
-            s.t.  constraints()
+            .. math::
+                f(x) = \sum_{i} \Big[ \big(c_{i} (1 + x_{i} / d_{i})^{a_{i}} \big) - c_{i} \Big]
+
+        where :math:`a_{i} = \bar{a}_{i} (1 - z_{i})`.
+
+        Parameters
+        ----------
+        x : Sequence
+            The sequence of variables present in the objective function.
+
+        Returns
+        -------
+        y : float
+            The evaluation of the expression :math:`f(x)` at :math:`t^{th}` iteration.
+        """
+        tmp = ((self.cs * np.power((1 + (x / self.ds)), self.abar)) - self.cs)
+        y = (- np.sum(tmp) - self.eps)
+
+        return y
+
+    def constraints(self):
+        r"""
+        Function generate constraints.
+
+        Scipy.optimize.minimize module requires a tuple of constraints, each of which is a dict with
+        at least two keys, ``'type'`` and ``'fun'``.
+
+        * ``'type'`` can be either ``'eq'`` or ``'ineq'``. Particularly, ``'ineq'`` is non-negative, e.g., :math:`0 \leq b - Ax`
+
+        * ``'fun'`` is a callable.
+
+        Returns
+        -------
+        ct : tuple
+            A tuple with the constraint mappings.
+        """
+        ct = ({'type': 'ineq',
+              'fun': (lambda x: self.B - np.sum((self.ps * x)))},
+              )
+        return ct
+
+    def bounds(self):
+        r"""
+        Function generates lower and upper bounds for decision variables.
+
+        Scipy.optimize.minimize module requires a tuple of ``(lb, ub)`` for variables. ``None`` indicates unbounded, e.g.,
+
+            * :math:`x_{i} \geq 0` => (0, None)
+            * :math:`t \in \mathbb{R}` => (None, None)
+
+        Returns
+        -------
+        bnds : tuple
+            Tuple of tuples ``(lb, ub)`` with the lower and upper bounds for the :math:`n` variables.
+        """
+        bnds = tuple([(0.0, None) for _ in range(self.n)])
+
+        return bnds
+
+    def solve(self, display=False):
+        r"""
+        Function calls for Oracle solution.
+
+        Generates an :math:`\epsilon`-approximate optimization oracle for the original optimization problem,
+        with a given set of uncertainty.
+
+        .. math::
+            \min_{x} \  objective(x, *args)
+
+            s.t.\ \ \  constraints()
+
                   bounds()
 
-        Inputs:
-            z     ~ realized uncertainty value
-            eps   ~ epsilon-approximate
-            the rest inputs defines the optimization problem
-        Output:
-            x     ~ an epsilon-approximate solution
-    """
+        Parameters
+        ----------
+        display : bool, optional
+            Whether or not to display optimization information. The default is ``False``.
 
-    n = len(ahat)
+        Returns
+        -------
+        float
+            The :math:`\epsilon`-approximate function value.
+        Sequence
+            The :math:`\epsilon`-approximate solution :math:`x^{t}`.
 
-    # select a initial iterate
-    x0 = B / n * np.ones(n)
+        """
+        x0 = (self.B / (self.n * np.ones(self.n)))  # Select a initial iterate
 
-    # call solver
-    res = minimize(
-        objective, x0, args=(ahat, cs, ds, eps),
-        method='trust-constr', bounds=bounds(n),
-        constraints=constraints(ps, B),
-        options={'disp': False}
-    )
+        res = minimize(fun=self.objective_fnc,
+                       x0=x0,
+                       args=(),
+                       method='trust-constr',
+                       bounds=self.bounds(),
+                       constraints=self.constraints(),
+                       options={'disp': display}
+                       )
+        if (res.success):
+            fval = - res.fun
+            x = res.x
 
-    if res.success:
-        fval = -res.fun
-        x = res.x
-        return fval, x
-    else:
-        print(res.message)
-        print('Fail to solve the oracle')
-        return None, None
+            return fval, x
+        else:
+            print(res.message)
+            print('Fail to solve the oracle')
 
-
-def test():
-    n = 4
-    abar = np.array([0.2, 0.1875, 0.1625, 0.15])
-    cs = 30 * np.ones(n)
-    ds = 1000 * np.ones(n)
-    ps = 0.1 * np.array([1.1, 0.85, 0.9, 0.8])
-    B = 1
-    eps = 1e-4
-
-    abar = abar * (1 - np.array([0.0539, 0.7472, 0.0259, 0.1730]))
-    fval, x = oracle(eps, abar, cs, ds, ps, B)
-    print(fval, x)
-
-
-if __name__ == "__main__":
-    test()
+            return None, None

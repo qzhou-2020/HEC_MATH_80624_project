@@ -1,95 +1,105 @@
-"""
-dual-subgradient epi-approximate robust optimization
+r"""
+Code file contains the Dual-Subgradient Algorithm for :math:`epsilon`-approximate robust optimization.
 """
 
 import numpy as np
 
-from oracle import oracle
+from oracle import Oracle
 from uncertainty import BudgetUncertaintySet, CertaintySet
+from tool import maxGrad, gradient
 
 
-def dualSubgradient(eps, U, abar, cs, ds, ps, B, earlystop=True, itermax=1e3, disp=True):
+def dualSubgradient(eps, U, abar, cs, ds, ps, B, earlystop=True, itermax=1e3, display=True):
+    r"""
+    Function implements an :math:`\epsilon`-approximate robust optimization solver based on dual-subgradient method.
+
+    See `Ben-Tal et al. (2015) Oracle-Based Robust Optimization via Online Learning`__
+
+    The consumer convertion is given by function :math:`h(x)`, such that,
+
+    .. math::
+        h(x_{i}) = c_{i} \cdot \Big(1 + \frac{x_{i}}{d_{i}} \Big)^{\bar{a}_{i}} - c_{i}
+
+    where :math:`\bar{a}_{i} = a_{i} \cdot (1.0 - 0.25 \cdot z_{i})`.
+
+    __ http://pubsonline.informs.org/doi/10.1287/opre.2015.1374
+
+    Parameters
+    ----------
+    eps : float
+        The :math:`\epsilon`-approximate tolerance.
+    U : object
+        Object of class type ``UncertaintySet``.
+    abar : Sequence
+        Parameter whose value is uncertain.
+    cs : Sequence
+        Parameter used to calculate :math:`h(x)` function.
+    ds : Sequence
+        Parameter used to calculate :math:`h(x)` function.
+    ps : Sequence
+        Prices for each daily ad insertion on website :math:`i`.
+    B : float
+        The total daily budget for the ad campaign.
+    earlystop : bool, optional
+        Whether or not to allow stopping before maximum number of iterations. The default is ``True``.
+    itermax : int, optional
+        The maximum number of iterations the algorithm can run. The default is ``1000``.
+    display : bool, optional
+        Whether or not to display the algorithm progress at each iteration. The default is ``True``.
+
+    Returns
+    -------
+    fmean : float
+        The mean function value.
+    xmean : Sequence
+        The mean solution vector.
     """
-        An epsilon-approximate robust optimization solver 
-        based on dual-subgradient method.
+    z = U.get()  # Get a uncertainty vector realization
 
-        See Ben-Tal et al., 2015, oracle-based robust optimization via online learning
+    # Call oracle to solve for ``x``
+    ahat = (abar * (1.000 - (0.250 * z)))
+    fval, x = Oracle(eps, ahat, cs, ds, ps, B).solve()
 
-        Inputs:
-            eps ~ accuracy parameter
-            U   ~ uncertainty set
-    """
+    g = gradient(ahat, cs, ds, x)  # Calulate :math:`\nabla_z f(x, z)`
 
-    # get a uncertainty vector realization
-    z = U.get()
+    iter_count = 1  # Iteration counter
 
-    # call oracle to solve for x
-    ahat = abar * (1.0 - 0.25 * z)
-    fval, x = oracle(eps, ahat, cs, ds, ps, B)
-    
-    # calculate \nabla_z f(x, z)
-    g = cs * np.log(1 + x / ds) * np.power(1 + x / ds, ahat)
-
-    # iterate count
-    iter = 1
-
-    # save x_t
-    xs = [x]
+    xs = [x]  # Save :math:`x_{t}`
 
     # output
     fmean = 0
     xmean = np.zeros(len(abar))
 
-    if disp:
-      #         172   5.3925e-02    -9.986455e-07
-        print("iter |   fval         fval_change ")
+    if (display):
+        print(" Iter |    fval     |    fval_change ")
+
     while True:
-        # update ahat
-        ahat = abar * (1 - 0.25 * z)
-        # call oracle
-        fval, x = oracle(eps, ahat, cs, ds, ps, B)   
-        # calulate \nabla_z f(x, z)
-        g = cs * np.log(1 + x / ds) * np.power(1 + x / ds, ahat)
-        # new z
-        zprime = z + 1/np.sqrt(iter) * g 
-        # update z
-        z = U.project(zprime)
-        
-        # iterative average     
-        fmeanprime = (iter - 1.0) / iter * fmean + fval / iter
-        xmeanprime = (iter - 1.0) / iter * xmean + x / iter
-        
-        if disp: 
-            print(f"{iter:4d}   {fmeanprime:.4e}    {fmeanprime-fmean:.6e}")
-        
-        if iter > itermax: break
-        
-        # early stopping check
-        if earlystop and np.fabs(fmeanprime - fmean) < eps: break
-        
-        # update fmean
+        ahat = abar * (1 - 0.25 * z)  # Updata ``\hat{a}``
+        fval, x = Oracle(eps, ahat, cs, ds, ps, B).solve()  # Call Oracle
+        g = gradient(ahat, cs, ds, x)  # Calulate :math:`\nabla_z f(x, z)`
+        z_prime = (z + ((1 / np.sqrt(iter_count)) * g))  # New ``z``
+        z = U.project(z_prime)  # Update ``z``
+
+        # Iterative average
+        fmeanprime = ((((iter_count - 1.0) / iter_count) * fmean) + (fval / iter_count))
+        xmeanprime = ((((iter_count - 1.0) / iter_count) * xmean) + (x / iter_count))
+
+        if (display):
+            print(f"{iter_count:4d}    {fmeanprime:.4e}    {fmeanprime-fmean:.6e}")
+
+        if (iter_count > itermax):  # Stopping after the maximum number of iterations has been reached
+            break
+
+        if (earlystop and (np.fabs(fmeanprime - fmean) < eps)):  # Early stopping check
+            break
+
+        # Update fmean
         fmean = fmeanprime
         xmean = xmeanprime
-        
-        # update iter
-        iter = iter + 1
-        
-    # return the average value
-    print("number of iterations:", iter)
-    return fmean, xmean
 
+        iter_count += 1  # Increasing iteration counter
 
-if __name__ == "__main__":
-    n = 4
-    abar = np.array([0.2, 0.1875, 0.1625, 0.15])
-    cs = 30 * np.ones(n)
-    ds = 1000 * np.ones(n)
-    ps = 0.1 * np.array([1.1, 0.85, 0.9, 0.8])
-    B = 1
-    gamma = 1
-    eps = 1e-6
+    if (display):
+        print("Number of iterations:", iter_count)
 
-    U = BudgetUncertaintySet(n, gamma, half=True)
-
-    fval, x = dualSubgradient(eps, U, abar, cs, ds, ps, B, disp=True, earlystop=False, itermax=200)
-    print(fval, np.round(x, 4))
+    return fmean, xmean  # Return the mean values
