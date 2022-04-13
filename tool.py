@@ -81,7 +81,7 @@ def gradient(abar, cs, ds, xs):
 
 
 def build_problem(n=10, a_params=(0.15000, 0.20000), c_param=30.0, d_param=1000.0, p_params=(0.1, 0.800, 1.100),
-                  option='original'):
+                  option='original', seed=None):
     r"""
     Function generates the size if the data for the problem.
 
@@ -92,13 +92,17 @@ def build_problem(n=10, a_params=(0.15000, 0.20000), c_param=30.0, d_param=1000.
     a_params : tuple, optional
         The [min, max] values of interval to generate values for vector ``a``. The default is ``(0.150, 0.200)``.
     c_param : float, optional
-        The multiplier parameter :math:`c_{i}` in function :math:`h(x_{i})` (we assume the same for all values). The default is ``30.0``.
+        The multiplier parameter :math:`c_{i}` in function :math:`h(x_{i})` (we assume the same for all values).
+        The default is ``30.0``.
     d_param : float, optional
-        The denominator parameter :math:`d_{i}` in function :math:`h(x_{i})` (we assume the same for all values). The default is ``1000.0``.
+        The denominator parameter :math:`d_{i}` in function :math:`h(x_{i})` (we assume the same for all values).
+        The default is ``1000.0``.
     p_params : tuple, optional
         The unit scaling and [min, max] values of interval to generate price values. The default is ``(0.10, 0.80, 1.10)``.
     option : str, optional
         The option to generate data (either ``'original'`` or ``'scaled'``). The default is ``'original'``.
+    seed : Union[int, None], optional
+        The seed for the default random number generator for reproducibility. The default is ``None``.
 
     Returns
     -------
@@ -121,9 +125,12 @@ def build_problem(n=10, a_params=(0.15000, 0.20000), c_param=30.0, d_param=1000.
 
     if (option != 'original'):
         size = n
-        a_bar = np.random.uniform(a_params[0], a_params[1], size=size)
+        rng = np.random.default_rng()
+        if (seed is not None):
+            rng = np.random.default_rng(seed)
+        a_bar = rng.uniform(a_params[0], a_params[1], size=size)
         cs = (c_param * np.ones(size, dtype=float))
         ds = (d_param * np.ones(size, dtype=float))
-        ps = (p_params[0] * np.random.uniform(p_params[1], p_params[2], size=size))
+        ps = (p_params[0] * rng.uniform(p_params[1], p_params[2], size=size))
 
     return (a_bar, size, cs, ds, ps)

@@ -5,7 +5,7 @@ Code file contains the Dual-Subgradient Algorithm for :math:`epsilon`-approximat
 import numpy as np
 
 from oracle import Oracle
-from uncertainty import BudgetUncertaintySet, CertaintySet
+from uncertainty import BudgetUncertaintySet, CertaintySet, EllipsoidalUncertaintySet
 from tool import maxGrad, gradient
 
 
@@ -15,12 +15,26 @@ def dualSubgradient(eps, U, abar, cs, ds, ps, B, earlystop=True, itermax=1e3, di
 
     See `Ben-Tal et al. (2015) Oracle-Based Robust Optimization via Online Learning`__
 
-    The consumer convertion is given by function :math:`h(x)`, such that,
+    The method calculates :math:`\bar{x}` and :math:`\bar{f}(x)` for the Ad Campaign problem, where a given number
+    :math:`x_{i}` of ads is placed in a website :math:`i` for a given price :math:`p_{i}`. The consumer convertion
+    is given by the function :math:`h(x)`, such that,
 
     .. math::
-        h(x_{i}) = c_{i} \cdot \Big(1 + \frac{x_{i}}{d_{i}} \Big)^{\bar{a}_{i}} - c_{i}
+        h(x_{i}) = c_{i} \cdot \Big(1 + \frac{x_{i}}{d_{i}} \Big)^{a_{i}} - c_{i}
 
-    where :math:`\bar{a}_{i} = a_{i} \cdot (1.0 - 0.25 \cdot z_{i})`.
+    where :math:`a_{i} = \bar{a}_{i} \cdot (1.0 - 0.25 \cdot z_{i})`. The problem is then to maximize the consumer
+    conversion given an ad daily budget :math:`B`
+
+    .. math::
+        \underset{x}{\text{maximize}} &\ \ \ \ \ h(x)
+
+        \text{S.t.:} \ \ \ \ &h(x_{i}) = c_{i} \cdot y_{i}^{a_{i}} - c_{i}, && \forall{i}
+
+        &y_{i} = 1 + \frac{x_{i}}{d_{i}}, && \forall{i}
+
+        &\sum_{i} p_{i} x_{i} \leq B, &&
+
+        &x_{i} \geq 0, && \forall{i}
 
     __ http://pubsonline.informs.org/doi/10.1287/opre.2015.1374
 
@@ -29,7 +43,7 @@ def dualSubgradient(eps, U, abar, cs, ds, ps, B, earlystop=True, itermax=1e3, di
     eps : float
         The :math:`\epsilon`-approximate tolerance.
     U : object
-        Object of class type ``UncertaintySet``.
+        Object of class type ``UncertaintySetBase``.
     abar : Sequence
         Parameter whose value is uncertain.
     cs : Sequence
@@ -60,7 +74,7 @@ def dualSubgradient(eps, U, abar, cs, ds, ps, B, earlystop=True, itermax=1e3, di
     ahat = (abar * (1.000 - (0.250 * z)))
     fval, x = Oracle(eps, ahat, cs, ds, ps, B).solve()
 
-    g = gradient(ahat, cs, ds, x)  # Calulate :math:`\nabla_z f(x, z)`
+    g = gradient(ahat, cs, ds, x)  # Calculate :math:`\nabla_{z} f(x, z)`
 
     iter_count = 1  # Iteration counter
 
@@ -74,13 +88,13 @@ def dualSubgradient(eps, U, abar, cs, ds, ps, B, earlystop=True, itermax=1e3, di
         print(" Iter |    fval     |    fval_change ")
 
     while True:
-        ahat = abar * (1 - 0.25 * z)  # Updata ``\hat{a}``
+        ahat = abar * (1 - 0.25 * z)  # Update :math:`\hat{a}`
         fval, x = Oracle(eps, ahat, cs, ds, ps, B).solve()  # Call Oracle
-        g = gradient(ahat, cs, ds, x)  # Calulate :math:`\nabla_z f(x, z)`
-        z_prime = (z + ((1 / np.sqrt(iter_count)) * g))  # New ``z``
-        z = U.project(z_prime)  # Update ``z``
+        g = gradient(ahat, cs, ds, x)  # Calculate :math:`\nabla_{z} f(x, z)`
+        z_prime = (z + ((1 / np.sqrt(iter_count)) * g))  # New :math:`z`
+        z = U.project(z_prime)  # Update :math:`z`
 
-        # Iterative average
+        # Iteration average
         fmeanprime = ((((iter_count - 1.0) / iter_count) * fmean) + (fval / iter_count))
         xmeanprime = ((((iter_count - 1.0) / iter_count) * xmean) + (x / iter_count))
 

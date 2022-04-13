@@ -7,7 +7,7 @@ from scipy.optimize import minimize
 
 
 class UncertaintySetBase(object):
-    """
+    r"""
     Abstract base class for a uncertainty set objects
 
     Methods
@@ -51,6 +51,43 @@ class UncertaintySetBase(object):
         ``NotImplemented``
         """
         raise NotImplementedError("Function not yet implemented")
+
+
+class CertaintySet(UncertaintySetBase):
+    r"""
+    Creates a set with no uncertainty.
+
+    Parameters
+    ----------
+    size : int
+        The size of the vector realizations.
+    **kwargs : any
+        Additional parameters.
+
+    Methods
+    -------
+    ``get()``: Returns an uncertainty vector realization.
+
+    ``diam()``: Returns the diameter of the uncertainty set.
+
+    ``project()``: Returns the uncertainty set projection.
+    """
+
+    def __init__(self, size, **kwargs):
+        super().__init__(**kwargs)
+        self.n = size
+
+    def get(self):
+        """Returns a vector of zeros."""
+        return np.zeros(self.n)
+
+    def diam(self):
+        """Returns zero, since set has no diameter."""
+        return 0
+
+    def project(self, z):
+        """Returns a vector of zeros."""
+        return np.zeros(self.n)
 
 
 class BudgetUncertaintySet(UncertaintySetBase):
@@ -175,7 +212,7 @@ class BudgetUncertaintySet(UncertaintySetBase):
         The projection is defined as
 
         .. math::
-            \underset{y \in \mathcal{U}}{argmin} \  ||y - z||_{2}
+            \underset{y \in \mathcal{U}}{\text{argmin}} \  ||y - z||_{2}
 
         Parameters
         ----------
@@ -206,7 +243,7 @@ class BudgetUncertaintySet(UncertaintySetBase):
 
     def generate(self, n):
         r"""
-        Generates a random vector :math:`z` with feasible.
+        Generates a random vector :math:`z` with feasible values.
 
         Parameters
         ----------
@@ -260,43 +297,6 @@ class BudgetUncertaintySet(UncertaintySetBase):
             is_feasible = False
 
         return is_feasible
-
-
-class CertaintySet(UncertaintySetBase):
-    """
-    Creates a set with no uncertainty.
-
-    Parameters
-    ----------
-    size : int
-        The size of the vector realizations.
-    **kwargs : any
-        Additional parameters.
-
-    Methods
-    -------
-    ``get()``: Returns an uncertainty vector realization.
-
-    ``diam()``: Returns the diameter of the uncertainty set.
-
-    ``project()``: Returns the uncertainty set projection.
-    """
-
-    def __init__(self, size, **kwargs):
-        super().__init__(**kwargs)
-        self.n = size
-
-    def get(self):
-        """Returns a vector of zeros."""
-        return np.zeros(self.n)
-
-    def diam(self):
-        """Returns zero, since set has no diameter."""
-        return 0
-
-    def project(self, z):
-        """Returns a vector of zeros."""
-        return np.zeros(self.n)
 
 
 class EllipsoidalUncertaintySet(UncertaintySetBase):
@@ -493,3 +493,259 @@ class EllipsoidalUncertaintySet(UncertaintySetBase):
                 is_valid = True
 
         return is_valid
+
+
+class CustomizedUncertaintySet(UncertaintySetBase):
+    r"""
+    Creates a Customized uncertainty set object.
+
+    Customized Uncertainty set defined as
+
+    .. math::
+        \Big\{z \in \mathbb{R}^{n} \ \vert \ z \geq 0,\ \sum_{i}z_{i} = 1,\ \sum_{i}z_{i}\ln{(z_{i})} \leq \rho \Big\}
+
+    where :math:`\rho \in \mathbb{R}` is an input parameter.
+
+    Parameters
+    ----------
+    size : int
+        The size of vectors :math:`z`.
+    rho : float
+        The uncertainty parameter.
+    n_store : int
+        Number of feasible vectors to generate. The default is ``10``.
+    **kwargs : any
+        Other additional parameters.
+
+    Methods
+    -------
+    ``get()``: Returns an uncertainty vector realization.
+
+    ``diam()``: Returns the diameter of the uncertainty set.
+
+    ``project()``: Returns the uncertainty set projection.
+
+    ``generate()``: Generates a sequence of feasible vectors :math:`z`.
+
+    ``feasible()``: Tests if the generated vector is feasible.
+    """
+
+    def __init__(self, size, rho, n_store=10, **kwargs):
+        self.n = size
+        self.rho = rho
+        self._n_store = n_store
+        self.i = 0
+        self.store = self.generate(self._n_store)
+        self.diameter = self._diam()
+
+    def get(self):
+        r"""
+        Returns a feasible realization of vector :math:`z` from the stored sequence.
+
+        Returns
+        -------
+        z : Sequence
+            Feasible realization.
+        """
+        z = self.store[self.i]  # Fetch a realization i
+        self.i += 1  # Update index to move forward
+
+        if (self.i == len(self.store)):  # If all feasible realization have been used, generate new realizations
+            self.i = 0  # Reset index
+            self.store = self.generate(self._n_store)
+
+        return z
+
+    def diam(self):
+        """Returns the set's diameter."""
+        return self.diameter
+
+    def _diam(self):
+        r"""
+        Calculates the diameter of the uncertainty set.
+
+        The diameter is calculated as the :math:`l2`-norm of the set, i.e.,
+
+        .. math::
+            diam = \sup_{u, v \in \mathcal{U}} ||u - v||_{2}.
+
+        For the ``scipy.optimize.minimize`` function, we then have:
+
+        .. math::
+            diam = \underset{u, v \in \mathcal{U}}{\text{minimize}}\ \ \ (- ||u - v||_{2}).
+        """
+        def objct_fnc(var):
+            r"""
+            Callable for the ``scipy.optimize.minimize`` function.
+
+            Parameters
+            ----------
+            var : Sequence
+                The sequence with the problem variables.
+
+            Returns
+            -------
+            objct : float
+                The diameter of the of the set.
+            """
+            objct = (- np.linalg.norm((var[:self.n] - var[self.n:]), 2))
+            return objct
+
+        def constraint(n, rho):
+            r"""
+            Callable for the ``scipy.optimize.minimize`` function.
+
+            Parameters
+            ----------
+            n : int
+                Size of vector.
+            rho : float
+                Parameter :math:`\rho`.
+
+            Returns
+            -------
+            tuple
+                Tuple with constraints.
+            """
+            # Customized set constraint for u
+            constr = [{'type': 'ineq',  # :math:`u_{i} \geq 0`
+                       'fun': lambda x: x[:n]},
+                      {'type': 'eq',  # :math:`\sum_{i} u_{i} = 1`
+                       'fun': lambda x: (1.0 - np.sum(x[:n]))},
+                      {'type': 'ineq',  # :math:`\sum_{i} u_{i} \ln(u_{i}) \leq \rho`
+                       'fun': lambda x: (rho - np.sum((x[:n] * np.log(x[:n], where=(x[:n] > 0.0)))))},
+                      ]
+            # Customized set constraint for v
+            constr += [{'type': 'ineq',  # :math:`v_{i} \geq 0`
+                       'fun': lambda x: x[n:]},
+                       {'type': 'eq',  # :math:`\sum_{i} v_{i} = 1`
+                       'fun': lambda x: (1.0 - np.sum(x[n:]))},
+                       {'type': 'ineq',  # :math:`\sum_{i} v_{i} \ln(v_{i}) \leq \rho`
+                       'fun': lambda x: (rho - np.sum((x[n:] * np.log(x[n:], where=(x[n:] > 0.0)))))},
+                       ]
+            return tuple(constr)
+        bounds = [(0.0, 1.0) for _ in range(2 * self.n)]  # Lower and upper bounds for :`math:`u,v \in \mathcal{U}`
+        # get initial iterate
+        # ! initial matters a lot
+        # ! set x0 = 0 does NOT yield a correct solution
+        x0 = np.zeros(2 * self.n)
+        x0[:self.n] = self.get()
+        x0[self.n:] = self.get()
+
+        res = minimize(
+            fun=objct_fnc,
+            x0=x0,
+            bounds=tuple(bounds),
+            constraints=constraint(self.n, self.rho)
+        )
+
+        return -res.fun
+
+    def project(self, z0):
+        r"""
+        Function finds the projection of :math:`z_{0}` onto the set.
+
+        The projection is defined as :math:`\underset{y \in \mathcal{U}}{\text{argmin}} \  ||y - z||_{2}`
+
+        Parameters
+        ----------
+        z0 : Sequence
+            The vector :math:`z_{0}` to calculate the projection.
+
+        Return
+        ------
+        The vector projection.
+        """
+        def objct_fnc(x0, *args):
+            """
+            Callable for the ``scipy.optimize.minimize`` function.
+
+            Parameters
+            ----------
+            x0 : Sequence
+                The sequence with the problem variables.
+            *args : Sequence
+                The vector :math:`z_{0}` to project.
+
+            Returns
+            -------
+            objct : float
+                The :math:`l2`-norm of the of the subtraction between :math:`z` and :math:`z_{0}`.
+            """
+            z_0 = args[0]
+            objct = np.linalg.norm((x0 - z_0), 2)
+            return objct
+        constr = [{'type': 'ineq',  # :math:`z_{i} \geq 0`
+                   'fun': lambda x: x[:self.n]},
+                  {'type': 'eq',  # :math:`\sum_{i} z_{i} = 1`
+                   'fun': lambda x: (np.sum(x[:self.n]) - 1.0)},
+                  {'type': 'ineq',  # :math:`\sum_{i} z_{i} \ln(z_{i}) \leq \rho`
+                   'fun': lambda x: (self.rho - np.sum((x[:self.n] * np.log(x[:self.n], where=(x[:self.n] > 0.0)))))},
+                  ]
+        bounds = [(0.0, 1.0) for _ in range(self.n)]
+
+        res = minimize(  # Call solver, 'SLSQP'
+            fun=objct_fnc,
+            x0=np.ones(self.n),
+            args=(z0),
+            bounds=tuple(bounds),
+            constraints=tuple(constr)
+        )
+
+        return res.x
+
+    def generate(self, n):
+        r"""
+        Generates a random vector :math:`z` with feasible values.
+
+        Parameters
+        ----------
+        n : int
+            The number of feasible vectors :math:`z`.
+
+        Returns
+        -------
+        store : Sequence
+            A list with :math:`n` feasible vectors :math:`z \in \mathcal{U}`.
+        """
+        count = 0
+        store = []
+        while True:
+            z = np.random.uniform(low=0.0, high=1.0, size=self.n)  # Random sample
+            z = (z / np.sum(z))
+
+            if (self.feasible(z)):  # Store :math:`z` only if it is feasible
+                store.append(z)
+                count = count + 1
+
+            if (count >= n):
+                break
+
+        return np.array(store, dtype=float)
+
+    def feasible(self, z):
+        r"""
+        Function checks if a given vector :math:`z` is inside the uncertainty set :math:`\mathcal{U}`.
+
+        Parameters
+        ----------
+        z : Sequence
+            Vector to be tested.
+
+        Return
+        ------
+        is_feasible : bool
+            ``True`` if :math:`z \in \mathcal{U}`, ``False`` otherwise.
+        """
+        is_feasible = True
+
+        if (np.any(z < 0.0) or np.any(z > 1.0)):  # Check bounds on :math:`z`
+            is_feasible = False
+
+        if ((np.round(np.sum(z), 15) > 1.0) or (np.round(np.sum(z), 15) < 1.0)):  # Check sum of :math:`z_{i}` equals to 1
+            is_feasible = False
+
+        if (np.sum((z * np.log(z, where=(z > 0.0)))) > self.rho):  # Check sum of :math:`z_{i}\ln(z_{i})` <= to :math:`\rho`
+            is_feasible = False
+
+        return is_feasible
