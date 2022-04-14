@@ -845,8 +845,19 @@ def solve_exercise_prob(**kwargs):
                 The number of websites to consider in the problem.
             option : str
                 The type of the problem. Either ``'original'`` or ``'scaled'``.
+            a_params : tuple, optional
+                Tuple with ``(low, high)`` for sampling interval. The default is ``(0.15000, 0.20000)``.
+            c_param : float, optional
+                Parameter :math:`c_{i}`. The default is ``30.0``.
+            d_param : float, optional
+                Parameter :math:`d_{i}`. The default is ``1000.0``.
+            p_params : tuple, optional
+                Tuple with ``(scaling, low, high)`` for scaling price and sampling interval.
+                The default is ``(0.1, 0.800, 1.100)``.
             B : float
                 The daily budget amount for the ads.
+            seed : int, optional
+                The seed used in the ``numpy.random.Generator`` object for reproducibility. The default is ``None``.
             Gamma : float
                 The :math:`\Gamma` parameter for the Budgeted uncertainty set.
             rho : float
@@ -865,7 +876,13 @@ def solve_exercise_prob(**kwargs):
     results : tuple
         Tuple with the function value and solution vector for the uncertainty set chosen.
     """
-    (abar, size, cs, ds, ps) = build_problem(n=int(kwargs.get('n', 4)), option=str(kwargs.get('option', 'original')))
+    (abar, size, cs, ds, ps) = build_problem(n=int(kwargs.get('n', 4)),
+                                             a_params=kwargs.get('a_params', (0.15000, 0.20000)),
+                                             c_param=kwargs.get('c_param', 30.0),
+                                             d_param=kwargs.get('d_param', 1000.0),
+                                             p_params=kwargs.get('p_params', (0.1, 0.800, 1.100)),
+                                             option=kwargs.get('option', 'original').lower(),
+                                             seed=kwargs.get('seed', None))
     ahat = (0.25 * abar)
     problem = kwargs.get('prob', 'budget').lower()
 
