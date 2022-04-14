@@ -478,14 +478,12 @@ class ellipsoidalProblem(adCampaignProblem):
         """
         x = var[:self.n]
         v = var[self.n:(2 * self.n)]
-        # lbd = var[-1]
 
         y = (1 + (x / self.ds))
 
         g_xv = np.sum((self.cs - ((v / np.log(y)) * np.log((- (v / self.cs) / np.log(y)))) + (v / np.log(y))))
 
         d_vz = (np.sum(self.abar * v) + (self.rho * np.linalg.norm((- (0.25 * self.abar * v)), 2)))
-        # d_vz = (np.sum(self.abar * v) + (self.rho * lbd))
 
         obj = (d_vz + g_xv)
 
@@ -498,7 +496,7 @@ class ellipsoidalProblem(adCampaignProblem):
         .. math::
             \begin{cases}
                 B - \sum_{i} p_{i} x_{i} \geq 0,\\
-                \lambda - ||-0.25\cdot\textbf{diag}(\bar{a})v||_{2} \geq 0,\\
+                %s - ||-0.25\cdot\textbf{diag}(\bar{a})v||_{2} \geq 0,\\
                 \ x \geq 0,\\
                 \ -v \geq 0,\\
                 \lambda \geq 0
@@ -538,7 +536,6 @@ class ellipsoidalProblem(adCampaignProblem):
         """
         bnds = [(0, None) for _ in range(self.n)]  # :math:`x`
         bnds += [(None, 0) for _ in range(self.n)]  # :math:`v`
-        # bnds += [(0, None)]  # :math:`\lambda`
 
         return tuple(bnds)
 
@@ -551,7 +548,7 @@ class ellipsoidalProblem(adCampaignProblem):
         .. math::
             &\underset{x, y, t, \lambda, v}{\text{minimize}} \ \ - t
 
-            \text{S.t.:} \ \ \ \ &t + \bar{a}^{T}v + \rho\lambda
+            \text{S.t.:} \ \ \ \ &t + \bar{a}^{T}v + \rho ||-0.25\cdot\textbf{diag}(\bar{a})v||_{2}
             + \sum_{i} \bigg( c_{i} - \frac{v_{i}}{\ln{y_{i}}} \ln{\Big( \frac{-v_{i} / c_{i}}{\ln{y_{i}}} \Big)}
                                                                         + \frac{v_{i}}{\ln{y_{i}}} \bigg) \leq 0
 
@@ -559,8 +556,7 @@ class ellipsoidalProblem(adCampaignProblem):
 
             &\sum_{i} p_{i} x_{i} \leq B
 
-            &\lambda \geq ||-0.25\cdot\textbf{diag}(\bar{a})v||_{2}
-
+            %&s = ||-0.25\cdot\textbf{diag}(\bar{a})v||_{2}
             &x \geq 0
 
             &v \leq 0
@@ -664,14 +660,14 @@ class customizedSetProblem(adCampaignProblem):
         we have
 
         .. math::
-            \delta^{*}(v \ | \ \mathcal{Z}) := \lambda + \sum_{i} \mu \exp \Big( \frac{w_{2i}}{\mu - 1} \Big) + \rho\mu
+            \delta^{*}(v \ | \ \mathcal{Z}) := \lambda + \sum_{i} \mu \exp \Big( \frac{w_{2i}}{\mu} - 1 \Big) + \rho\mu
 
         and
 
         .. math::
             \delta^{*}(v \ |\ \mathcal{U}) &:= \bar{a}^{T}v + \delta^{*}(-0.25 \text{diag}(\bar{a})v \ \vert\ \mathcal{Z})
 
-            &:= \min \bar{a}^{T}v + \lambda + \sum_{i} \mu \exp \Big( \frac{w_{2i}}{\mu - 1} \Big) + \rho\mu
+            &:= \min \bar{a}^{T}v + \lambda + \sum_{i} \mu \exp \Big( \frac{w_{2i}}{\mu} - 1 \Big) + \rho\mu
 
         with :math:`\lambda,\mu \in \mathbb{R}`, :math:`\lambda \geq -0.25 \text{diag}(\bar{a})v - w_{2}` and
         :math:`\mu \geq 0`.
@@ -688,16 +684,15 @@ class customizedSetProblem(adCampaignProblem):
         """
         x = var[:self.n]
         v = var[self.n:(2 * self.n)]
-        # w2 = var[(2 * self.n):(3 * self.n)]
-        s = var[-3]
-        # lbd = var[-2]
-        # mu = var[-1]
+        w2 = var[(2 * self.n):(3 * self.n)]
+        lbd = var[-2]
+        mu = var[-1]
 
         y = (1.0 + (x / self.ds))
 
         g_xv = np.sum((self.cs - ((v / np.log(y)) * np.log((- (v / self.cs) / np.log(y)))) + (v / np.log(y))))
 
-        d_vz = (np.sum(self.abar * v) + s)
+        d_vz = (np.sum(self.abar * v) + lbd + np.sum((mu * np.exp(((w2 / mu) - 1)))) + (self.rho * mu))
 
         obj = (d_vz + g_xv)
 
@@ -710,7 +705,7 @@ class customizedSetProblem(adCampaignProblem):
         .. math::
             \begin{cases}
                 B - \sum_{i} p_{i} x_{i} \geq 0,\\
-                s - \lambda - \sum_{i} \mu \exp\Big(\frac{w_{2i}}{\mu - 1}\Big) - \rho\mu \geq 0,\\
+                %s - \lambda - \sum_{i} \mu \exp\Big(\frac{w_{2i}}{\mu - 1}\Big) - \rho\mu \geq 0,\\
                 \lambda + 0.25 \cdot \mathbf{diag}(\bar{a})v + w \geq 0,\\
                 \ x \geq 0,\\
                 \mu \geq 0,\\
@@ -725,11 +720,6 @@ class customizedSetProblem(adCampaignProblem):
         cts = [
             {'type': 'ineq',
              'fun': lambda x: (self.B - np.sum(self.ps * x[:self.n]))},
-            {'type': 'ineq',
-             'fun': lambda x: (x[-3]
-                               - x[-2]
-                               - np.sum((x[-1] * np.exp((x[(2 * self.n):(3 * self.n)] / (x[-1] - 1)))))
-                               - (self.rho * x[-1]))},
             {'type': 'ineq',
              'fun': lambda x: (x[-2] + (0.25 * self.abar * x[self.n:(2 * self.n)]) + x[(2 * self.n):(3 * self.n)])},
             {'type': 'ineq',
@@ -759,7 +749,6 @@ class customizedSetProblem(adCampaignProblem):
         bnds = [(0.0, None) for _ in range(self.n)]  # :math:`x`
         bnds += [(None, 0.0) for _ in range(self.n)]  # :math:`v`
         bnds += [(None, None) for _ in range(self.n)]  # :math:`w`
-        bnds += [(None, None)]  # :math:`s`
         bnds += [(None, None)]  # :math:`\lambda`
         bnds += [(0.0, None)]  # :math:`\mu`
 
@@ -782,7 +771,7 @@ class customizedSetProblem(adCampaignProblem):
 
             &\sum_{i} p_{i} x_{i} \leq B
 
-            &s \geq \lambda + \sum_{i} \mu \exp\Big( \frac{w_{i}}{\mu - 1} \Big) + \rho\mu
+            &s = \lambda + \sum_{i} \mu e^{\left( \frac{w_{i}}{\mu} -1 \right)} + \rho\mu
 
             &\lambda \geq -0.25 \mathbf{diag}(\bar{a})v - w
 
@@ -802,13 +791,10 @@ class customizedSetProblem(adCampaignProblem):
         Sequence
             The solution vector.
         """
-        x0 = np.zeros(((3 * self.n) + 3), dtype=float)
+        x0 = np.zeros(((3 * self.n) + 2), dtype=float)
         x0[:self.n] = (self.B / self.n)  # Initializing :math:`x` vars
         x0[self.n:(2 * self.n)] = -1  # Initializing :math:`v` vars
-        x0[(2 * self.n):(3 * self.n)] = -1  # Initializing :math:`w_{2}` vars
-        # x0[-3] = -1.0  # Initializing :math:`s` var
-        # x0[-2] = -1.0  # Initializing :math:`\lambda` var
-        x0[-1] = 1.1  # Initializing :math:`\mu` var
+        x0[-1] = 0.25  # Initializing :math:`\mu` var
 
         res = minimize(
             fun=self.objct_fnc,
@@ -845,8 +831,19 @@ def solve_exercise_prob(**kwargs):
                 The number of websites to consider in the problem.
             option : str
                 The type of the problem. Either ``'original'`` or ``'scaled'``.
+            a_params : tuple, optional
+                Tuple with ``(low, high)`` for sampling interval. The default is ``(0.15000, 0.20000)``.
+            c_param : float, optional
+                Parameter :math:`c_{i}`. The default is ``30.0``.
+            d_param : float, optional
+                Parameter :math:`d_{i}`. The default is ``1000.0``.
+            p_params : tuple, optional
+                Tuple with ``(scaling, low, high)`` for scaling price and sampling interval.
+                The default is ``(0.1, 0.800, 1.100)``.
             B : float
                 The daily budget amount for the ads.
+            seed : int, optional
+                The seed used in the ``numpy.random.Generator`` object for reproducibility. The default is ``None``.
             Gamma : float
                 The :math:`\Gamma` parameter for the Budgeted uncertainty set.
             rho : float
@@ -865,7 +862,13 @@ def solve_exercise_prob(**kwargs):
     results : tuple
         Tuple with the function value and solution vector for the uncertainty set chosen.
     """
-    (abar, size, cs, ds, ps) = build_problem(n=int(kwargs.get('n', 4)), option=str(kwargs.get('option', 'original')))
+    (abar, size, cs, ds, ps) = build_problem(n=int(kwargs.get('n', 4)),
+                                             a_params=kwargs.get('a_params', (0.15000, 0.20000)),
+                                             c_param=kwargs.get('c_param', 30.0),
+                                             d_param=kwargs.get('d_param', 1000.0),
+                                             p_params=kwargs.get('p_params', (0.1, 0.800, 1.100)),
+                                             option=kwargs.get('option', 'original').lower(),
+                                             seed=kwargs.get('seed', None))
     ahat = (0.25 * abar)
     problem = kwargs.get('prob', 'budget').lower()
 

@@ -92,6 +92,10 @@ def build_case_study(size=10, **kwargs):
             sigma : numpy.ndarray, optional
                 The matrix :math:`\Sigma` for the Ellipsoidal uncertainty set. The default is ``None``, meaning an identity
                 matrix of size :math:`n \times n` (:math:`n=` ``size``) is created.
+            earlystop : bool, optional
+                Whether or not to allow algorithm to stop before ``itermax`` is reached. The default is ``True``.
+            itermax : int, optional
+                The maximum number of iterations of the algorithm. The default is ``1e3``.
             display : bool, optional
                 Whether or not to show the information at each iteration of the algorithm. The default is ``True``.
 
@@ -134,6 +138,8 @@ def build_case_study(size=10, **kwargs):
                               ds=ds,
                               ps=ps,
                               B=kwargs.get('B', 1.0),
+                              earlystop=kwargs.get('earlystop', True),
+                              itermax=kwargs.get('itermax', 1e3),
                               display=kwargs.get('display', True))  # Solving with Dual-Subgradient algorithm
 
     print(("The robust optimization problem with " + uncertainty_set + " solution predicts a profit of {:.4f}").format(fval))
