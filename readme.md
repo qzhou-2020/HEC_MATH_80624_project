@@ -34,12 +34,15 @@
 
 ### Project Report:
 
-- [ ] 
-- [ ] 
-- [ ] 
-- [ ] 
-- [ ] 
-- [ ] 
-- [ ] 
-- [ ] 
-- [ ] 
+- [ ] Abstract
+- [ ] Introduction
+- [ ] Motivation
+- [ ] Related Works
+- [ ] Approximate RO
+- [ ] Case Study
+- [ ] Results and Discussion
+- [ ] Conclusion
+- [x] Code Availability
+- [x] Statement of Contributions
+- [ ] References
+- [ ] Appendix
