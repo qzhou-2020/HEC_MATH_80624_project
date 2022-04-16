@@ -2,14 +2,14 @@
 
 ### Code Implementation and Numerical Study:
 
-- [ ] Uncertainty sets:
+- [x] Uncertainty sets:
 	* [x] Implement Budgeted uncertainty set for Dual-Subgradient Algorithm
 	* [x] Implement Ellipsoidal uncertainty set for Dual-Subgradient Algorithm
-	* [ ] Implement Customized uncertainty set for Dual-Subgradient Algorithm
+	* [x] Implement Customized uncertainty set for Dual-Subgradient Algorithm
 
 - [x] Code verification: Compare Matlab / Scipy / Approximate RO algorithm using default case (Exercise 6.2.1)
 - [x] Original problem with Ellipsoidal uncertainty set
-- [x] Original problem with Customized uncertainty set (**Need to double check**)
+- [x] Original problem with Customized uncertainty set (**FIXED**)
 - [x] Scaled problem with Budgeted uncertainty set (size and gamma):
 	* [x] Scipy
 	* [x] Approximate RO
@@ -34,12 +34,24 @@
 
 ### Project Report:
 
-- [ ] 
-- [ ] 
-- [ ] 
-- [ ] 
-- [ ] 
-- [ ] 
-- [ ] 
-- [ ] 
-- [ ] 
+- [ ] Abstract
+- [ ] Introduction
+- [ ] Motivation
+- [ ] Related Works
+- [ ] Approximate RO
+- [x] Case Study
+	* [x] Problem Description
+		- [x] Budgeted Uncertainty Set
+		- [x] Ellipsoidal Uncertainty Set
+		- [x] Customized Uncertainty Set
+	* [x] Problem Instances
+		- [x] Base Case
+		- [x] Scaled Problems
+- [ ] Numerical Analysis
+	* [x] Algorithm Convergence
+	* [ ] 
+- [ ] Conclusion
+- [x] Code Availability
+- [x] Statement of Contributions
+- [ ] References
+- [x] Appendix - Tables

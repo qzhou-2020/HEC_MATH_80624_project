@@ -156,7 +156,7 @@ def test_maxGrad():
     ps = (0.1 * np.array([1.100, 0.850, 0.900, 0.800], dtype=float))
     B = 1.0
 
-    assert(np.round(maxGrad(abar, cs, ds, ps, B), 6) == np.round(0.37334527424444053, 6))
+    assert(np.round(maxGrad(abar, cs, ds, ps, B), 3) == np.round(0.37334527424444053, 3))
 
 
 def test_gradient():
