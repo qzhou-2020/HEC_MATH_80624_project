@@ -9,7 +9,7 @@ __ https://tintin.hec.ca/pages/erick.delage/MATH80624_LectureNotes.pdf
 
 import numpy as np
 from scipy.optimize import minimize
-from tool import build_problem
+from approxRO.tools.tool import build_problem
 import warnings
 warnings.filterwarnings('ignore', category=UserWarning)
 

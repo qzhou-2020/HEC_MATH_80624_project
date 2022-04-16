@@ -4,9 +4,9 @@ Code file contains the Dual-Subgradient Algorithm for :math:`epsilon`-approximat
 
 import numpy as np
 
-from oracle import Oracle
-from uncertainty import BudgetUncertaintySet, CertaintySet, EllipsoidalUncertaintySet
-from tool import maxGrad, gradient
+from approxRO.algorithm.oracle import Oracle
+from approxRO.algorithm.uncertainty import BudgetUncertaintySet, CertaintySet, EllipsoidalUncertaintySet
+from approxRO.tools.tool import maxGrad, gradient
 
 
 def dualSubgradient(eps, U, abar, cs, ds, ps, B, earlystop=True, itermax=1e3, display=True):

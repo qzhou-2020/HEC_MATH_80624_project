@@ -3,9 +3,10 @@ The main function driver to run numerical studies.
 """
 
 import numpy as np
-from uncertainty import BudgetUncertaintySet, CertaintySet, EllipsoidalUncertaintySet, CustomizedUncertaintySet
-from tool import build_problem
-from dualsubgradient import dualSubgradient
+from approxRO.algorithm.uncertainty import BudgetUncertaintySet, CertaintySet, EllipsoidalUncertaintySet, CustomizedUncertaintySet
+from approxRO.algorithm.dualsubgradient import dualSubgradient
+from approxRO.tools.tool import build_problem
+from approxRO.evaluation.tests_algo import test_convergence, test_runtime
 import warnings
 warnings.filterwarnings('ignore', category=UserWarning)
 
@@ -149,6 +150,43 @@ def build_case_study(size=10, **kwargs):
 
 
 if __name__ == "__main__":
-    case_study_1()
+    # case_study_1()
     # build_case_study(4, option='scaled')
-    build_case_study(size=10, option='scaled')
+    # build_case_study(size=4, option='original', U='budget')
+    # build_case_study(size=10, option='scaled')
+    size = 4
+    U_set = BudgetUncertaintySet(size=size,
+                                 Gamma=1.0,
+                                 half=True,
+                                 n_store=10)
+
+    # seq = np.array(([1] + [i for i in range(10, 501, 10)] + [i for i in range(525, 1001, 25)]), dtype=int)
+    seq = np.array(([1] + [i for i in range(10, 201, 10)]), dtype=int)
+    print(seq)
+
+    # converge = test_convergence(eps=1e-6,
+    #                             U_set=U_set,
+    #                             size=size,
+    #                             option='original',
+    #                             B=1.0,
+    #                             seq=seq,
+    #                             seed=None,
+    #                             get_x=False,
+    #                             n_jobs=-1,
+    #                             backend='multiprocessing',
+    #                             verbose=25)
+
+    # runtime = test_runtime(n_tests=10,
+    #                        eps=1e-6,
+    #                        U_set=U_set,
+    #                        size=size,
+    #                        option='scaled',
+    #                        B=1.0,
+    #                        seed=None,
+    #                        earlystop=True,
+    #                        itermax=1e3,
+    #                        display=False,
+    #                        get_x=False,
+    #                        n_jobs=-1,
+    #                        backend='multiprocessing',
+    #                        verbose=25)
