@@ -7,9 +7,10 @@ The purpose of this code is to test implement the problem and test it with ``sci
 __ https://tintin.hec.ca/pages/erick.delage/MATH80624_LectureNotes.pdf
 """
 
+
 import numpy as np
 from scipy.optimize import minimize
-from approxRO.tools.tool import build_problem
+from tools import build_problem
 import warnings
 warnings.filterwarnings('ignore', category=UserWarning)
 
@@ -160,7 +161,7 @@ class nominalProblem(adCampaignProblem):
 
         return bnds
 
-    def solve_prob(self):
+    def solve_prob(self, **kwargs):
         """
         Function builds and solves the optimization problem using ``scipy.optimize.minimize``.
 
@@ -180,7 +181,9 @@ class nominalProblem(adCampaignProblem):
             method='trust-constr',
             bounds=self.bounds(),
             constraints=self.constraints(),
-            options={'disp': self._verbose}
+            tol=kwargs.get('tol', None),
+            options={'disp': self._verbose,
+                     'maxiter': int(kwargs.get('maxiter', 10000))}
             )
         if (res.success):
             print("Objective function value for nominal problem is:", np.round(-res.fun, 3))
@@ -814,7 +817,7 @@ class customizedSetProblem(adCampaignProblem):
         return np.round(-res.fun, 5), np.round(res.x[:self.n], 5)
 
 
-def solve_exercise_prob(**kwargs):
+def solve_rc_reformulation_ch6(**kwargs):
     r"""
     Function solves the Ad Campaign problem of `Exercise 6.2`__ under different uncertainty sets.
 

@@ -34,11 +34,11 @@
 
 ### Project Report:
 
-- [ ] Abstract
+- [x] Abstract
 - [ ] Introduction
 - [ ] Motivation
 - [ ] Related Works
-- [ ] Approximate RO
+- [x] Approximate RO
 - [x] Case Study
 	* [x] Problem Description
 		- [x] Budgeted Uncertainty Set
@@ -47,9 +47,11 @@
 	* [x] Problem Instances
 		- [x] Base Case
 		- [x] Scaled Problems
-- [ ] Numerical Analysis
+- [x] Numerical Analysis
+	* [x] Validation of RC reformulations and algorithm
+	* [x] Different uncertainty sets
 	* [x] Algorithm Convergence
-	* [ ] 
+	* [x] Scalability of problem (run time)
 - [ ] Conclusion
 - [x] Code Availability
 - [x] Statement of Contributions

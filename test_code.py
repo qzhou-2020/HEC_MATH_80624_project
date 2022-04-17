@@ -1,12 +1,15 @@
-"""
+r"""
 Tests for the code files.
+
+Functions to automatically call ``pytest``.
 """
 
+
 import numpy as np
-from approxRO.algorithm.oracle import Oracle
-from approxRO.algorithm.uncertainty import BudgetUncertaintySet, CertaintySet, EllipsoidalUncertaintySet, CustomizedUncertaintySet
-from approxRO.algorithm.dualsubgradient import dualSubgradient
-from approxRO.tools.tool import maxGrad, gradient
+from oracle import Oracle
+from uncertainty import BudgetUncertaintySet, CertaintySet, EllipsoidalUncertaintySet, CustomizedUncertaintySet
+from dualsubgradient import dualSubgradient
+from tools import maxGrad, gradient
 import warnings
 warnings.filterwarnings('ignore', category=UserWarning)
 

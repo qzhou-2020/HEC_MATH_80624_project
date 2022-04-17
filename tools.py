@@ -1,9 +1,19 @@
 r"""
-Code file has the function to calculate
+Helper functions to the implementation
 
-.. math::
-    \sup ||\nabla_{z} f(x, z)||_{2}
+    ``maxGrad()``
+        Calculates :math:`\sup ||\nabla_{z} f(x, z)||_{2}`
+
+    ``gradient()``
+        Calculates :math:`||\nabla_{z} f(x, z)||_{2}`
+
+    ``build_problem()``
+        Builds a problem instance.
+
+    ``generate_seed_sequence()``
+        Generates a sequence of large numbers to be used as random number generator seeds.
 """
+
 
 import numpy as np
 from scipy.optimize import minimize
@@ -134,3 +144,38 @@ def build_problem(n=10, a_params=(0.15000, 0.20000), c_param=30.0, d_param=1000.
         ps = (p_params[0] * rng.uniform(p_params[1], p_params[2], size=size))
 
     return (a_bar, size, cs, ds, ps)
+
+
+def generate_seed_sequence(n_bits=16, init_seed=82561, n_seq=1):
+    r"""
+    Function generates a sequence of ``n_seq`` candidate prime numbers to be seeds for random number generators.
+
+    Parameters
+    ----------
+    n_bits : ``int``, optional
+        The number of bits :math:`b` for :math:`2^{b}`. The default is ``16``.
+    init_seed : ``Union[int, None]``, optional
+        The initial seed to generate seeds. ``None`` instantiates RNG based on NumPy. The default is ``82561``.
+    n_seq : ``int``, optional
+        The number of seeds to generate. The default is ``1``.
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+    """
+    rng = np.random.default_rng()
+    if (init_seed is not None):
+        rng = np.random.default_rng(init_seed)
+    if (n_seq == 1):
+        seed = int(rng.integers(low=((2 ** (n_bits - 1)) + 1), high=((2 ** n_bits) - 1), size=n_seq))
+        if ((seed % 2) == 0):
+            seed += 1
+
+        return seed
+    else:
+        seeds = rng.integers(low=((2 ** (n_bits - 1)) + 1), high=((2 ** n_bits) - 1), size=n_seq)
+        even = ((seeds % 2) == 0)
+        seeds[even] += 1
+
+        return seeds

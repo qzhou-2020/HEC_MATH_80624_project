@@ -2,6 +2,7 @@
 Define the objects for the different uncertainty sets available.
 """
 
+
 import numpy as np
 from scipy.optimize import minimize
 
@@ -108,16 +109,21 @@ class BudgetUncertaintySet(UncertaintySetBase):
 
     Parameters
     ----------
-    size : int
+    size : ``int``
         The size of vectors :math:`z`.
-    Gamma : float
+    Gamma : ``float``
         The uncertainty parameter.
-    half : bool, optional
+    half : ``bool``, optional
         Whether or not to consider only the positive half. The default is ``False``.
-    n_store : int
+    n_store : ``int``
         Number of feasible vectors to generate. The default is ``10``.
-    **kwargs : Vary
+    **kwargs : any
         Other additional parameters.
+            decimals : ``int``, optional
+                The number of decimals for the values in the random vector :math:`z\in\mathcal{Z}`. The default is ``9``.
+            dist : ``str``, optional
+                The type of distribution to generate the random vectors :math:`z`. Either ``'normal'`` or ``'uniform'``.
+                The default is ``'uniform'``.
 
     Methods
     -------
@@ -138,17 +144,18 @@ class BudgetUncertaintySet(UncertaintySetBase):
         self.half = half
         self._n_store = n_store
         self.i = 0  # Save a list of feasible realization
-        self.store = self.generate(n_store)
+        self._dist = kwargs.get('dist', 'uniform')
+        self.store = self.generate(n_store, decimals=int(kwargs.get('decimals', 9)))
         self.diameter = self._diam()  # Diameter of the set
 
     def get(self):
-        """
-        Returns a feasible realization from the stored sequence.
+        r"""
+        Returns a feasible realization :math:`z\in\mathcal{Z}` from the stored sequence.
 
         Returns
         -------
-        z : Sequence
-            Feasible realization.
+        z : ``Sequence``
+            Feasible realization :math:`z\in\mathcal{Z}`.
         """
         z = self.store[self.i]  # Fetch a realization i
         self.i += 1  # Update index to move forward
@@ -216,7 +223,7 @@ class BudgetUncertaintySet(UncertaintySetBase):
 
         Parameters
         ----------
-        z0 : Sequence
+        z0 : ``Sequence``
             The vector :math:`z_{0}` to calculate the projection.
 
         Return
@@ -241,24 +248,31 @@ class BudgetUncertaintySet(UncertaintySetBase):
 
         return res.x
 
-    def generate(self, n):
+    def generate(self, n, decimals=9):
         r"""
         Generates a random vector :math:`z` with feasible values.
 
         Parameters
         ----------
-        n : int
+        n : ``int``
             The number of feasible vectors :math:`z`.
 
         Returns
         -------
-        store : Sequence
+        store : ``Sequence``
             A list with :math:`n` feasible vectors :math:`z \in \mathcal{U}`.
         """
         count = 0  # Keeps track of number of feasible z generated
         store = []
         while True:
-            z = np.random.normal(0.00, 0.35, self.n)
+            if (self._dist == 'normal'):
+                # if (self.half):
+                #     z = np.random.normal(0.50, (1.0 / 6.0), self.n)
+                # else:
+                #     z = np.random.normal(0.00, (1.0 / 3.0), self.n)
+                z = np.random.normal(0.00, 0.34, self.n)
+            else:
+                z = self._generate_random(decimals=decimals)
 
             if (self.feasible(z)):  # Store `z` only if it is feasible
                 store.append(z)
@@ -270,19 +284,50 @@ class BudgetUncertaintySet(UncertaintySetBase):
 
         return np.array(store, dtype=float)
 
-    def feasible(self, z):
+    def _generate_random(self, decimals=9):
         r"""
-        Function checks if a given vector :math:`z` is inside the uncertainty set :math:`\mathcal{U}`.
+        Function generates a random vector :math:`z\in\mathcal{Z}` with :math:`n` values.
+
+        The random values are sampled from a uniform distribution.
 
         Parameters
         ----------
-        z : Sequence
+        decimals : ``int``, optional
+            The number of decimals for the values in the random vector :math:`z\in\mathcal{Z}`. The default is ``9``.
+
+        Returns
+        -------
+        z : ``Sequence``
+            A random vector :math:`z\in\mathcal{Z}`.
+        """
+        z = []
+
+        for i in range(self.n):
+            upper = float(np.min([1.0, (self.Gamma - np.sum(np.abs(z)))]))
+            if (self.half):
+                z += [float(np.random.uniform(low=0.0, high=upper, size=1))]
+            else:
+                z += [float(np.random.uniform(low=(- upper), high=upper, size=1))]
+        z = np.round(np.array(z, dtype=float), decimals=decimals)
+
+        for i in range(np.random.randint(1, 11)):
+            np.random.shuffle(z)
+
+        return z
+
+    def feasible(self, z):
+        r"""
+        Function checks if a given vector :math:`z` is inside the uncertainty set :math:`\mathcal{Z}`.
+
+        Parameters
+        ----------
+        z : ``Sequence``
             Vector to be tested.
 
         Return
         ------
-        is_feasible : bool
-            ``True`` if :math:`z \in \mathcal{U}`, ``False`` otherwise.
+        is_feasible : ``bool``
+            ``True`` if :math:`z \in \mathcal{Z}`, ``False`` otherwise.
         """
         is_feasible = True
 
@@ -516,6 +561,11 @@ class CustomizedUncertaintySet(UncertaintySetBase):
         Number of feasible vectors to generate. The default is ``10``.
     **kwargs : any
         Other additional parameters.
+            decimals : ``int``, optional
+                The number of decimals for the values in the random vector :math:`z\in\mathcal{Z}`. The default is ``9``.
+            dist : ``str``, optional
+                The type of distribution to generate the random vectors :math:`z`. Either ``'uniform1'`` or ``'uniform2'``.
+                The default is ``'uniform2'``.
 
     Methods
     -------
@@ -535,7 +585,8 @@ class CustomizedUncertaintySet(UncertaintySetBase):
         self.rho = rho
         self._n_store = n_store
         self.i = 0
-        self.store = self.generate(self._n_store)
+        self._dist = kwargs.get('dist', 'uniform2')
+        self.store = self.generate(self._n_store, decimals=int(kwargs.get('decimals', 9)))
         self.diameter = self._diam()
 
     def get(self):
@@ -544,7 +595,7 @@ class CustomizedUncertaintySet(UncertaintySetBase):
 
         Returns
         -------
-        z : Sequence
+        z : ``Sequence``
             Feasible realization.
         """
         z = self.store[self.i]  # Fetch a realization i
@@ -580,12 +631,12 @@ class CustomizedUncertaintySet(UncertaintySetBase):
 
             Parameters
             ----------
-            var : Sequence
+            var : ``Sequence``
                 The sequence with the problem variables.
 
             Returns
             -------
-            objct : float
+            objct : ``float``
                 The diameter of the of the set.
             """
             objct = (- np.linalg.norm((var[:self.n] - var[self.n:]), 2))
@@ -597,14 +648,14 @@ class CustomizedUncertaintySet(UncertaintySetBase):
 
             Parameters
             ----------
-            n : int
+            n : ``int``
                 Size of vector.
-            rho : float
+            rho : ``float``
                 Parameter :math:`\rho`.
 
             Returns
             -------
-            tuple
+            ``tuple``
                 Tuple with constraints.
             """
             # Customized set constraint for u
@@ -649,7 +700,7 @@ class CustomizedUncertaintySet(UncertaintySetBase):
 
         Parameters
         ----------
-        z0 : Sequence
+        z0 : ``Sequence``
             The vector :math:`z_{0}` to calculate the projection.
 
         Return
@@ -662,14 +713,14 @@ class CustomizedUncertaintySet(UncertaintySetBase):
 
             Parameters
             ----------
-            x0 : Sequence
+            x0 : ``Sequence``
                 The sequence with the problem variables.
-            *args : Sequence
+            *args : ``Sequence``
                 The vector :math:`z_{0}` to project.
 
             Returns
             -------
-            objct : float
+            objct : ``float``
                 The :math:`l2`-norm of the of the subtraction between :math:`z` and :math:`z_{0}`.
             """
             z_0 = args[0]
@@ -694,25 +745,28 @@ class CustomizedUncertaintySet(UncertaintySetBase):
 
         return res.x
 
-    def generate(self, n):
+    def generate(self, n, decimals=9):
         r"""
         Generates a random vector :math:`z` with feasible values.
 
         Parameters
         ----------
-        n : int
+        n : ``int``
             The number of feasible vectors :math:`z`.
 
         Returns
         -------
-        store : Sequence
+        store : ``Sequence``
             A list with :math:`n` feasible vectors :math:`z \in \mathcal{U}`.
         """
         count = 0
         store = []
         while True:
-            z = np.random.uniform(low=0.0, high=1.0, size=self.n)  # Random sample
-            z = (z / np.sum(z))
+            if (self._dist == 'uniform1'):
+                z = np.random.uniform(low=0.0, high=1.0, size=self.n)  # Random sample
+                z = (z / np.sum(z))
+            else:
+                z = self._generate_random(decimals=decimals)
 
             if (self.feasible(z)):  # Store :math:`z` only if it is feasible
                 store.append(z)
@@ -723,19 +777,48 @@ class CustomizedUncertaintySet(UncertaintySetBase):
 
         return np.array(store, dtype=float)
 
-    def feasible(self, z):
+    def _generate_random(self, decimals=9):
         r"""
-        Function checks if a given vector :math:`z` is inside the uncertainty set :math:`\mathcal{U}`.
+        Function generates a random vector :math:`z\in\mathcal{Z}` with :math:`n` values.
+
+        The random values are sampled from a uniform distribution.
 
         Parameters
         ----------
-        z : Sequence
+        decimals : ``int``, optional
+            The number of decimals for the values in the random vector :math:`z\in\mathcal{Z}`. The default is ``9``.
+
+        Returns
+        -------
+        z : ``Sequence``
+            A random vector :math:`z\in\mathcal{Z}`.
+        """
+        z = []
+
+        for i in range((self.n - 1)):
+            upper = float(np.min([1.0, (1.0 - np.sum(np.abs(z)))]))
+            z += [float(np.random.uniform(low=0.0, high=upper, size=1))]
+        z += [(1.0 - np.sum(np.abs(z)))]
+        z = np.round(np.array(z, dtype=float), decimals=decimals)
+
+        for i in range(np.random.randint(1, 11)):
+            np.random.shuffle(z)
+
+        return z
+
+    def feasible(self, z):
+        r"""
+        Function checks if a given vector :math:`z` is inside the uncertainty set :math:`\mathcal{Z}`.
+
+        Parameters
+        ----------
+        z : ``Sequence``
             Vector to be tested.
 
         Return
         ------
-        is_feasible : bool
-            ``True`` if :math:`z \in \mathcal{U}`, ``False`` otherwise.
+        is_feasible : ``bool``
+            ``True`` if :math:`z \in \mathcal{Z}`, ``False`` otherwise.
         """
         is_feasible = True
 
