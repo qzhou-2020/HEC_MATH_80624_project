@@ -47,9 +47,11 @@
 	* [x] Problem Instances
 		- [x] Base Case
 		- [x] Scaled Problems
-- [ ] Numerical Analysis
+- [x] Numerical Analysis
+	* [x] Validation of RC reformulations and algorithm
+	* [x] Different uncertainty sets
 	* [x] Algorithm Convergence
-	* [ ] 
+	* [x] Scalability of problem (run time)
 - [ ] Conclusion
 - [x] Code Availability
 - [x] Statement of Contributions

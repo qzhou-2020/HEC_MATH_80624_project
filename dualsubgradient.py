@@ -1,15 +1,16 @@
 r"""
-Code file contains the Dual-Subgradient Algorithm for :math:`epsilon`-approximate robust optimization.
+Code file contains the Dual-Subgradient Algorithm.
+
+``dualSubgradient()`` solves for an :math:`\epsilon`-approximate robust optimization.
 """
 
+
 import numpy as np
-
 from oracle import Oracle
-from uncertainty import BudgetUncertaintySet, CertaintySet, EllipsoidalUncertaintySet
-from tool import maxGrad, gradient
+from tools import maxGrad, gradient
 
 
-def dualSubgradient(eps, U, abar, cs, ds, ps, B, earlystop=True, itermax=1e3, display=True):
+def dualSubgradient(eps, U, abar, cs, ds, ps, B, earlystop=True, itermax=1e3, display=True, get_iters=False):
     r"""
     Function implements an :math:`\epsilon`-approximate robust optimization solver based on dual-subgradient method.
 
@@ -60,6 +61,8 @@ def dualSubgradient(eps, U, abar, cs, ds, ps, B, earlystop=True, itermax=1e3, di
         The maximum number of iterations the algorithm can run. The default is ``1000``.
     display : bool, optional
         Whether or not to display the algorithm progress at each iteration. The default is ``True``.
+    get_iters : bool, optional
+        Whether or not to return the number of iterations to stop. The default is ``False``.
 
     Returns
     -------
@@ -116,4 +119,7 @@ def dualSubgradient(eps, U, abar, cs, ds, ps, B, earlystop=True, itermax=1e3, di
     if (display):
         print("Number of iterations:", iter_count)
 
-    return fmean, xmean  # Return the mean values
+    if (get_iters):
+        return fmean, xmean, iter_count
+    else:
+        return fmean, xmean  # Return the mean values

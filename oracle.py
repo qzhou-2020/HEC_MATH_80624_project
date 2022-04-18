@@ -1,6 +1,9 @@
 r"""
-An epsilon-approximate optimization Oracle for the original optimization problem, with a given set of uncertainty.
+An :math:`\epsilon`-approximate optimization Oracle.
+
+The Oracle correctly returns a :math:`2\epsilon` solution, or declares the problem to be infeasible.
 """
+
 
 import numpy as np
 from scipy.optimize import minimize
