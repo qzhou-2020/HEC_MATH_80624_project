@@ -34,11 +34,11 @@
 
 ### Project Report:
 
-- [ ] Abstract
+- [x] Abstract
 - [ ] Introduction
 - [ ] Motivation
 - [ ] Related Works
-- [ ] Approximate RO
+- [x] Approximate RO
 - [x] Case Study
 	* [x] Problem Description
 		- [x] Budgeted Uncertainty Set
