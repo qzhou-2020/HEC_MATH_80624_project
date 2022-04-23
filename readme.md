@@ -35,9 +35,8 @@
 ### Project Report:
 
 - [x] Abstract
-- [ ] Introduction
-- [ ] Motivation
-- [ ] Related Works
+- [x] Introduction
+- [x] Related Works
 - [x] Approximate RO
 - [x] Case Study
 	* [x] Problem Description
@@ -52,8 +51,8 @@
 	* [x] Different uncertainty sets
 	* [x] Algorithm Convergence
 	* [x] Scalability of problem (run time)
-- [ ] Conclusion
+- [x] Conclusion
 - [x] Code Availability
 - [x] Statement of Contributions
-- [ ] References
+- [x] References
 - [x] Appendix - Tables
